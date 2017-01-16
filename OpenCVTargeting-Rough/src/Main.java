@@ -61,7 +61,7 @@ public class Main {
 		//Acquire the image and convert it into a Mat
 //		String filepath = "C:/Users/david/git/FRC2017-VisionTracking/sampleImages/LED Boiler/" + filename;
 		String filepath = filename;
-		//System.out.println(filepath);
+//		System.out.println(filepath);
 		Mat Image = new Mat(); 
 		Image = Imgcodecs.imread(filename);
 		
@@ -83,23 +83,24 @@ public class Main {
 		//Generate a Binary Mat
 		Imgproc.threshold(Diff, BinImg, 0, 255, Imgproc.THRESH_OTSU);
 		
-		
+		//Save binary image
 //		Imgcodecs.imwrite("C:/Users/david/Documents/eclipseworkspace/OpenCVPractice/BinaryImage" + runCount + ".jpg", BinImg);
 		Imgcodecs.imwrite("BinaryImage" + runCount + ".jpg", BinImg);
 		
+		//Find contours using binary image
 		List<MatOfPoint> contours = new ArrayList<>();
 		Mat hierarchy = new Mat();
 		Imgproc.findContours(BinImg, contours, hierarchy, Imgproc.RETR_CCOMP, Imgproc.CHAIN_APPROX_SIMPLE);
 		
 		//Filter Contours
-		List<MatOfPoint> targetContours = new ArrayList<>();
+		List<MatOfPoint> targetContours = new ArrayList<>(); //Array for storing desirable contours
 		for(int contID = 0 ; contID <= contours.size() - 1 ; contID++) {
-			RotatedRect rr = Imgproc.minAreaRect((new MatOfPoint2f(contours.get(contID).toArray())));
+			RotatedRect rr = Imgproc.minAreaRect((new MatOfPoint2f(contours.get(contID).toArray()))); //Creates a Rectangle around contour
 			Rect r = rr.boundingRect();
 			float ratio = (float) r.width/ (float) r.height;
 			double area = Imgproc.contourArea(contours.get(contID));
-			if(area > 100.0 && area < 1100.0) {
-				if(ratio < 10.0 && ratio > 1.0){
+			if(area > 100.0 && area < 1100.0) { //Threshold for area (size) of contour
+				if(ratio < 10.0 && ratio > 1.0){ //Threshold for aspect ratio (shape) of contour
 					targetContours.add(contours.get(contID));
 	
 					System.out.print(filename + " " + runCount);
@@ -110,31 +111,33 @@ public class Main {
 			}
 		}
 		
+		//2nd Layer of Filtering Contours (if more than 2 contours pass the initial filter)
 		boolean broken = false;
-		List<MatOfPoint> targetContoursLVL2 = new ArrayList<>();
+		List<MatOfPoint> targetContoursLVL2 = new ArrayList<>(); //secondary array of desired filters (only used if there are more than 2 contours in first array)
 		if(targetContours.size() > 2) {
 			for(int i = 0 ; i < targetContours.size() - 1 ; i++) {
 				for(int j = i + 1 ; j < targetContours.size() ; j++) {
-					if(Math.abs(targetContours.get(i).toArray()[0].x - targetContours.get(j).toArray()[0].x) < 20 ) {
-						if(Math.abs(targetContours.get(i).toArray()[0].y - targetContours.get(j).toArray()[0].y) < 40){
+					//compare a contour with the other contours following
+					if(Math.abs(targetContours.get(i).toArray()[0].x - targetContours.get(j).toArray()[0].x) < 20 ) { //Check if contours are aligned horizontally
+						if(Math.abs(targetContours.get(i).toArray()[0].y - targetContours.get(j).toArray()[0].y) < 40){ //check if contours are aligned vertically
 							targetContoursLVL2.add(targetContours.get(i));
 							targetContoursLVL2.add(targetContours.get(j));
 							broken = true;
-							break;
+							break; //exits the nested loop if desirable contours are found
 						}
 					}
 				}
-				if(broken) break;
+				if(broken) break; //exits the loop if desirable contours have been found
 			}
 		}
 		
 		//Draw contours
 		Mat procImage = Image;
-		if(targetContours.size() > 2)
+		if(targetContours.size() > 2) //If more than 2 contours were found with the first filter, draw the results from the second filter
 			Imgproc.drawContours(procImage, targetContoursLVL2, -1, new Scalar(0 , 0 , 255), 2);
 		else Imgproc.drawContours(procImage, targetContours, -1, new Scalar(0 , 0 , 255), 2);
 //		Imgcodecs.imwrite("C:/Users/david/Documents/eclipseworkspace/OpenCVPractice/ProcessedImage" + runCount + ".jpg", procImage);
-		Imgcodecs.imwrite("ProcessedImage" + runCount + ".jpg", procImage);
+		Imgcodecs.imwrite("ProcessedImage" + runCount + ".jpg", procImage); //Save the processed image containing contours
 //		System.out.println(contours.get(contID).toArray()[0].x + " , " + contours.get(contID).toArray()[0].y);
 		runCount++;
 	}
