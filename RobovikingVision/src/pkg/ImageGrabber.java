@@ -1,0 +1,69 @@
+package pkg;
+
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+
+import javax.imageio.ImageIO;
+
+/**
+ * Allows for capturing an image from an external source (e.g. camera feed, single image, image
+ * file, etc.) given the path to that source. Also contains logic for switching between sources.
+ * 
+ * @version 1.31.2017
+ * @author DavidRein
+ */
+public class ImageGrabber {
+	
+	/**Path for a target source*/
+	public static String SOURCE_PATH;
+	
+	/**Represents currently desired source type (e.g. camera feed, single image)*/
+	private static int SOURCE_TYPE;
+	
+	/**Constant that represents the respectively named external source*/
+	public static final int k_CAMERA_FEED = 0 , k_IMAGE_STREAM = 1 , k_IMAGE_FILE = 2;
+	
+	/**The default image to be displayed if no source is detected*/
+	public static BufferedImage DEFAULT_IMAGE;
+	
+	/**Constructor - initializes all static fields in the ImageGrabber class*/
+	public ImageGrabber() {
+		SOURCE_TYPE = k_IMAGE_FILE;
+		SOURCE_PATH = "1ftH8ftD1Angle0Brightness.jpg";
+		try {DEFAULT_IMAGE = ImageIO.read(new File("placeholder.jpg"));} catch (IOException e) {}
+	}
+	/**
+	 * Captures and stores an image from an external source (e.g. camera feed, image stream, image file)
+	 * @return BufferedImage that was captured
+	 */
+	public BufferedImage grab() {
+		if(SOURCE_TYPE == ImageGrabber.k_CAMERA_FEED){
+			//TODO return frame grabbed from camera feed
+			//TODO get library containing IPCameraFrameGrabber (edu.wpi.grip.core.sources.IPCameraFrameGrabber)
+			//TODO implement IPCameraFrameGrabber based on lines 582 through 654 of 2016 vision tracking program
+		}
+		if(SOURCE_TYPE == ImageGrabber.k_IMAGE_STREAM){
+			//TODO return frame of an image stream
+			//TODO Implement something similar to the savedImageStreamer from 2016 vision tracking software
+		}
+		if(SOURCE_TYPE == ImageGrabber.k_IMAGE_FILE) {
+			try { return ImageIO.read(new File(SOURCE_PATH));} catch (IOException e) {return DEFAULT_IMAGE;}
+		}
+		
+		return DEFAULT_IMAGE;
+	}
+	
+	/**@return path for the target source*/
+	public String getSourcePath(){
+		return SOURCE_PATH;
+	}
+	
+	/**Switches the desired source type
+	 * @param sourceIndex - Constant representation of sources
+	 * @see ImageGrabber(line 21)*/
+	public static void setSourceType(int sourceIndex) {
+		SOURCE_TYPE = sourceIndex;
+	}
+
+}
