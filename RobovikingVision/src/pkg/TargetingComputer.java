@@ -1,5 +1,8 @@
 package pkg;
 
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.ByteArrayInputStream;
@@ -41,6 +44,16 @@ public class TargetingComputer {
 	/**BufferedImage used to display the appropriately filtered image*/
 	private BufferedImage processedImage , binaryImage , originalImage;
 	
+	private Rect boundingRect;
+
+	private double ratioFTperPX;
+	private double distToTargetFT;
+	private double angleToTargetDEG;
+	
+	//Settings for Calibrating Vision
+	private final double targetWidthFT = 1.25;
+	private final double FOVangle = 61.0;
+	
 	//TODO add a config file or a settings menu to edit these tolerances
 	//Tolerances for filtering the vision targets
 	private final double areaToleranceLowerBound = 100.0;
@@ -57,6 +70,7 @@ public class TargetingComputer {
 		IMAGE_TYPE = k_ORIGINAL_IMAGE;
 		SAVE_IMAGES = false;
 		savedFrameCount = 0;
+		boundingRect = new Rect();
 	}
 	
 	/**Most important method of this class - calculates all data and generates the images to display
@@ -67,9 +81,18 @@ public class TargetingComputer {
 		imageMat = bufToMat(buffImg);
 		Mat binMat = binarize(imageMat);
 		binaryImage = matToBuf(binMat);
-		processedImage = matToBuf(drawTargets(filter(getTargets(binMat))));
-		//TODO add methods to calculate all data we need to gather from vision tracking
-		
+		List<MatOfPoint> contours = filter(getTargets(binMat));
+		processedImage = matToBuf(drawTargets(contours));
+		if(!contours.isEmpty()){
+			distToTargetFT = calculateDistanceToTarget((double) boundingRect.width);
+			System.out.print(distToTargetFT + "    ");
+			angleToTargetDEG = calculateAngleToTarget(distToTargetFT);
+			System.out.println(angleToTargetDEG);
+			drawHUD();
+		} else {
+			distToTargetFT = 0.0;
+			angleToTargetDEG = 0.0;
+		}
 		//if(Display.SAVE_IMAGES) saveImage(processedImage);
 		if(SAVE_IMAGES) System.out.println("THIS FEATURE IS NOT READY YET");
 	}
@@ -150,18 +173,57 @@ public class TargetingComputer {
 	 * @param targets - list of targets after filtering
 	 * @return Mat image with detected targets
 	 */
-	public Mat drawTargets( List<MatOfPoint> targets) {
+	public Mat drawTargets(List<MatOfPoint> targets) {
 		Mat processedImage = imageMat.clone();
 		Imgproc.drawContours(processedImage, targets, -1, new Scalar(0 , 255 , 0));
+		if(targets.size() == numberOfDesiredTargets) {
+			boundingRect = Imgproc.boundingRect(mergeContours(targets));
+			Imgproc.rectangle(processedImage, boundingRect.tl(), boundingRect.br(), new Scalar(255, 0, 255));
+		}
 		return processedImage;
 	}
 	
+	public void drawHUD() {
+		Graphics g = processedImage.createGraphics();
+		g.setColor(new Color(255, 0, 255));
+		g.setFont(new Font("TimesRoman", Font.PLAIN, 12));
+		g.drawString("DIST: " + distToTargetFT, boundingRect.x + boundingRect.width + 4, boundingRect.y + 7);
+		g.drawString("ANGLE: " + angleToTargetDEG, boundingRect.x + boundingRect.width + 4, boundingRect.y + 19);
+	}
+	
+	/**
+	 * Adds multiple contours together by converting them into a list of points and merging the two
+	 * lists
+	 * @param targets - list of contours to merge
+	 * @return a single MatOfPoint containing contours that were added together
+	 */
+	public MatOfPoint mergeContours(List<MatOfPoint> targets) {
+		List<Point> pointList = new ArrayList<Point>();
+		for(int i = 0 ; i < targets.size() ; i++) 
+			pointList.addAll(targets.get(i).toList());
+		//System.out.println(pointList);
+		MatOfPoint mop = new MatOfPoint() ;
+		mop.fromList(pointList);
+		return mop;
+	}
+	
+	public double calculateDistanceToTarget( double targetWidthPX) {
+		//TODO Compensate for the target's width changing based on rotation of camera (if the target is askew
+		//it will have a different width than if it was in the center)
+		ratioFTperPX = targetWidthFT / targetWidthPX;
+		return (0.5 * ((double) imageMat.width()) * ratioFTperPX) / Math.tan(Math.toRadians(FOVangle/2));
+	}
+	
+	public double calculateAngleToTarget( double distanceToTargetFT ) {
+		double offset = ((((double) boundingRect.x) + ((double) boundingRect.width) / 2.0) - (0.5 * ((double) imageMat.width())));
+		return Math.toDegrees(Math.atan((offset * ratioFTperPX) / distanceToTargetFT));
+	}
 	/**
 	 * Converts a Mat image into a Buffered image
 	 * @param m - Mat image to convert
 	 * @return BufferedImage
 	 */
-	public BufferedImage matToBuf(Mat m) {
+	public static BufferedImage matToBuf(Mat m) {
 		
 		//TODO print dimensions and channels of mat file for diagnostics purposes
         MatOfByte mByte = new MatOfByte();

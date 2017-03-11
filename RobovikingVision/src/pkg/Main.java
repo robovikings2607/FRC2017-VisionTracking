@@ -1,4 +1,7 @@
 package pkg;
+
+import org.opencv.core.Core;
+
 /**
  * Main class of this program
  * 
@@ -9,6 +12,7 @@ package pkg;
 public class Main {
 
 	public static void main(String[] args) {
+		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 		ImageGrabber ig = new ImageGrabber();
 		TargetingComputer tc = new TargetingComputer();
 		ImageDisplay disp = new ImageDisplay();

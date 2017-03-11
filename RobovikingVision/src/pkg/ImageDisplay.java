@@ -78,7 +78,7 @@ public class ImageDisplay implements ActionListener {
 		rbMenuItem5 = new JRadioButtonMenuItem("Image Stream");
 		rbMenuItem6 = new JRadioButtonMenuItem("Image File");
 		
-		rbMenuItem6.setSelected(true);
+		rbMenuItem4.setSelected(true);
 		
 		buttonGroup2.add(rbMenuItem4);
 		buttonGroup2.add(rbMenuItem5);

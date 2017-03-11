@@ -6,6 +6,9 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
+import org.opencv.core.Mat;
+import org.opencv.videoio.VideoCapture;
+
 /**
  * Allows for capturing an image from an external source (e.g. camera feed, single image, image
  * file, etc.) given the path to that source. Also contains logic for switching between sources.
@@ -27,11 +30,16 @@ public class ImageGrabber {
 	/**The default image to be displayed if no source is detected*/
 	public static BufferedImage DEFAULT_IMAGE;
 	
+	private VideoCapture vc;
+	private Mat cameraFrame;
+	
 	/**Constructor - initializes all static fields in the ImageGrabber class*/
 	public ImageGrabber() {
-		SOURCE_TYPE = k_IMAGE_FILE;
+		SOURCE_TYPE = k_CAMERA_FEED;
 		SOURCE_PATH = "1ftH8ftD1Angle0Brightness.jpg";
 		try {DEFAULT_IMAGE = ImageIO.read(new File("placeholder.jpg"));} catch (IOException e) {}
+		vc = new VideoCapture(0);
+		cameraFrame = new Mat();
 	}
 	/**
 	 * Captures and stores an image from an external source (e.g. camera feed, image stream, image file)
@@ -42,6 +50,8 @@ public class ImageGrabber {
 			//TODO return frame grabbed from camera feed
 			//TODO get library containing IPCameraFrameGrabber (edu.wpi.grip.core.sources.IPCameraFrameGrabber)
 			//TODO implement IPCameraFrameGrabber based on lines 582 through 654 of 2016 vision tracking program
+			vc.read(cameraFrame);
+			return TargetingComputer.matToBuf(cameraFrame);
 		}
 		if(SOURCE_TYPE == ImageGrabber.k_IMAGE_STREAM){
 			//TODO return frame of an image stream
