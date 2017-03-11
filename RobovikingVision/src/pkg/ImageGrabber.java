@@ -13,7 +13,7 @@ import org.opencv.videoio.VideoCapture;
  * Allows for capturing an image from an external source (e.g. camera feed, single image, image
  * file, etc.) given the path to that source. Also contains logic for switching between sources.
  * 
- * @version 1.31.2017
+ * @version 3.11.2017
  * @author DavidRein
  */
 public class ImageGrabber {

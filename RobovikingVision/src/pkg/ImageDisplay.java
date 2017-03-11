@@ -10,7 +10,7 @@ import javax.swing.*;
  * of what the targeting software is doing. Additionally, contains features that allow
  * the filtering and swapping of the image that is displayed.
  * 
- * @version 1.31.2017
+ * @version 3.11.2017
  * @author DavidRein
  */
 public class ImageDisplay implements ActionListener {

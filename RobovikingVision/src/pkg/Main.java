@@ -5,7 +5,7 @@ import org.opencv.core.Core;
 /**
  * Main class of this program
  * 
- * @version 1.31.2017
+ * @version 3.11.2017
  * @author DavidRein
  *
  */

@@ -21,7 +21,7 @@ import org.opencv.imgproc.Imgproc;
  * data from the information acquired from processing the image. Additionally, allows for 'filtered'
  * images to be saved or displayed.
  * 
- * @version 1.31.2017
+ * @version 3.11.2017
  * @author DavidRein
  *
  */
@@ -44,10 +44,16 @@ public class TargetingComputer {
 	/**BufferedImage used to display the appropriately filtered image*/
 	private BufferedImage processedImage , binaryImage , originalImage;
 	
+	/**Rectangle that wraps the target contours, allowing for easy estimation of length and width of the target*/
 	private Rect boundingRect;
 
+	/**Ratio used to convert Pixels to Feet (Feet per Pixel ratio)*/
 	private double ratioFTperPX;
+	
+	/**Stores the Distance from the camera to the target in feet*/
 	private double distToTargetFT;
+	
+	/**Stores the angle that the robot must turn to line up with the target in degrees*/
 	private double angleToTargetDEG;
 	
 	//Settings for Calibrating Vision
@@ -117,7 +123,7 @@ public class TargetingComputer {
 		return binaryImage;
 	}
 	
-	/**Generates a list of desireable targets from a binary Mat image
+	/**Generates a list of desirable targets from a binary Mat image
 	 * @param binaryImage - binary Mat image to generate targets from
 	 * @return list of potential targets
 	 */
@@ -183,6 +189,9 @@ public class TargetingComputer {
 		return processedImage;
 	}
 	
+	/**
+	 * Draws graphics onto the processed image
+	 */
 	public void drawHUD() {
 		Graphics g = processedImage.createGraphics();
 		g.setColor(new Color(255, 0, 255));
@@ -207,6 +216,12 @@ public class TargetingComputer {
 		return mop;
 	}
 	
+	/**
+	 * Uses the width of the target in pixels to calculate the distance from the target to the camera in feet. Also
+	 * sets the Feet per pixel Ratio.
+	 * @param targetWidthPX - The width of the target in pixels
+	 * @return double representing the distance between the target and camera
+	 */
 	public double calculateDistanceToTarget( double targetWidthPX) {
 		//TODO Compensate for the target's width changing based on rotation of camera (if the target is askew
 		//it will have a different width than if it was in the center)
@@ -214,6 +229,11 @@ public class TargetingComputer {
 		return (0.5 * ((double) imageMat.width()) * ratioFTperPX) / Math.tan(Math.toRadians(FOVangle/2));
 	}
 	
+	/**
+	 * Uses the distance to the target to calculate the angle that the camera must rotate in order to line up with the target
+	 * @param distanceToTargetFT - distance to target in feet
+	 * @return double representing the offset angle in degrees
+	 */
 	public double calculateAngleToTarget( double distanceToTargetFT ) {
 		double offset = ((((double) boundingRect.x) + ((double) boundingRect.width) / 2.0) - (0.5 * ((double) imageMat.width())));
 		return Math.toDegrees(Math.atan((offset * ratioFTperPX) / distanceToTargetFT));
