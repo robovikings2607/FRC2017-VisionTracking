@@ -5,9 +5,12 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,14 +24,12 @@ import org.opencv.imgproc.Imgproc;
  * data from the information acquired from processing the image. Additionally, allows for 'filtered'
  * images to be saved or displayed.
  * 
- * @version 3.11.2017
+ * @version 3.15.2017
  * @author DavidRein
  *
  */
 public class TargetingComputer {
 
-	//TODO Use these variables for...something
-	public static String SAVED_FRAME_PATH = "";
 	public static boolean SAVE_IMAGES;
 	private int savedFrameCount;
 	
@@ -50,15 +51,14 @@ public class TargetingComputer {
 	/**Ratio used to convert Pixels to Feet (Feet per Pixel ratio)*/
 	private double ratioFTperPX;
 	
-	/**Stores the Distance from the camera to the target in feet*/
-	private double distToTargetFT;
+	/**Stores the Distance from the camera to the target*/
+	private double distToTargetFT , distToTargetPX;
+	
+	private double targetOffsetX , targetOffsetY;
+	private double targetWidthPX , targetHeightPX;
 	
 	/**Stores the angle that the robot must turn to line up with the target in degrees*/
 	private double angleToTargetDEG;
-	
-	//Settings for Calibrating Vision
-	private final double targetWidthFT = 1.25;
-	private final double FOVangle = 61.0;
 	
 	//TODO add a config file or a settings menu to edit these tolerances
 	//Tolerances for filtering the vision targets
@@ -70,6 +70,10 @@ public class TargetingComputer {
 	private final int xDiffTolerance = 20;
 	private final int yDiffTolerance = 40;
 	
+	//Settings for Calibrating Vision
+	private final double targetWidthFT = 1.25;
+	private final double FOVangle = 61.0;
+		
 	/**Constructor - loads the OpenCV library and initializes fields of the TargetingComputer class*/
 	public TargetingComputer() {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -79,6 +83,8 @@ public class TargetingComputer {
 		boundingRect = new Rect();
 	}
 	
+	boolean firstRun = true;
+	DataLogger logger;
 	/**Most important method of this class - calculates all data and generates the images to display
 	 * @param buffImg - original image from external source
 	 */
@@ -87,10 +93,12 @@ public class TargetingComputer {
 		imageMat = bufToMat(buffImg);
 		Mat binMat = binarize(imageMat);
 		binaryImage = matToBuf(binMat);
-		List<MatOfPoint> contours = filter(getTargets(binMat));
+		List<MatOfPoint> contours = getTargets(binMat);
 		processedImage = matToBuf(drawTargets(contours));
 		if(!contours.isEmpty()){
-			distToTargetFT = calculateDistanceToTarget((double) boundingRect.width);
+			targetWidthPX = (double) boundingRect.width;
+			targetHeightPX = (double) boundingRect.height;
+			distToTargetFT = calculateDistanceToTarget(targetWidthPX);
 			System.out.print(distToTargetFT + "    ");
 			angleToTargetDEG = calculateAngleToTarget(distToTargetFT);
 			System.out.println(angleToTargetDEG);
@@ -99,8 +107,37 @@ public class TargetingComputer {
 			distToTargetFT = 0.0;
 			angleToTargetDEG = 0.0;
 		}
-		//if(Display.SAVE_IMAGES) saveImage(processedImage);
-		if(SAVE_IMAGES) System.out.println("THIS FEATURE IS NOT READY YET");
+		
+		if(SAVE_IMAGES) {
+			switch(savedFrameCount) {
+			case 0:
+				ImageSaver.makeDirectory();
+			default:
+				new ImageSaver(originalImage, "Original", savedFrameCount).start();
+				new ImageSaver(binaryImage, "Binary", savedFrameCount).start();
+				new ImageSaver(processedImage, "Processed", savedFrameCount).start();
+				savedFrameCount++;
+			}
+		} else {
+			savedFrameCount = 0;
+		}
+		
+		if(SAVE_IMAGES) {
+			if(firstRun){
+				logger = new DataLogger("Distance[ft] , Distance[px] , "
+						+ "TargetWidth[px] , TargetHeight[px] , "
+						+ "TargetOffsetX[px] , TargetOffsetY[px] , "
+						+ "Angle[deg] , ratioFTperPX[ft/px]");
+				firstRun = false;
+			}
+			logger.log(this.distToTargetFT + " , " + this.distToTargetPX + " , " 
+					+ this.targetWidthPX + " , " + this.targetHeightPX + " , "
+					+ this.targetOffsetX + " , " + this.targetOffsetY + " , "
+					+ this.angleToTargetDEG + " , " + this.ratioFTperPX + " , ");
+		} else if(!SAVE_IMAGES && !firstRun) {
+			logger.close();
+			firstRun = true;
+		}
 	}
 	
 	/**Convert an original Mat image into a black & white Mat image where any White would be 
@@ -198,6 +235,18 @@ public class TargetingComputer {
 		g.setFont(new Font("TimesRoman", Font.PLAIN, 12));
 		g.drawString("DIST: " + distToTargetFT, boundingRect.x + boundingRect.width + 4, boundingRect.y + 7);
 		g.drawString("ANGLE: " + angleToTargetDEG, boundingRect.x + boundingRect.width + 4, boundingRect.y + 19);
+		g.setColor(new Color(255, 255, 255));
+		g.drawLine(processedImage.getWidth() / 2, processedImage.getHeight() / 2, boundingRect.x + (boundingRect.width / 2), 
+				processedImage.getHeight() / 2);
+		g.drawLine(processedImage.getWidth() / 2, processedImage.getHeight() / 2, processedImage.getWidth() / 2, 
+				boundingRect.y + (boundingRect.height / 2));
+		g.setColor(new Color(255, 255, 0));
+		g.drawLine(processedImage.getWidth() / 2, boundingRect.y + (boundingRect.height / 2), 
+				boundingRect.x + (boundingRect.width / 2), boundingRect.y + (boundingRect.height / 2));
+		g.drawLine(boundingRect.x + (boundingRect.width / 2), processedImage.getHeight() / 2, 
+				boundingRect.x + (boundingRect.width / 2), boundingRect.y + (boundingRect.height / 2));
+		g.drawLine(processedImage.getWidth() / 2, processedImage.getHeight() / 2, 
+				boundingRect.x + (boundingRect.width / 2), boundingRect.y + (boundingRect.height / 2));
 	}
 	
 	/**
@@ -226,18 +275,21 @@ public class TargetingComputer {
 		//TODO Compensate for the target's width changing based on rotation of camera (if the target is askew
 		//it will have a different width than if it was in the center)
 		ratioFTperPX = targetWidthFT / targetWidthPX;
+		distToTargetPX = (0.5 * (double) imageMat.width()) / Math.tan(Math.toRadians(FOVangle/2));
 		return (0.5 * ((double) imageMat.width()) * ratioFTperPX) / Math.tan(Math.toRadians(FOVangle/2));
 	}
 	
 	/**
 	 * Uses the distance to the target to calculate the angle that the camera must rotate in order to line up with the target
 	 * @param distanceToTargetFT - distance to target in feet
-	 * @return double representing the offset angle in degrees
+	 * @return double representing the targetOffsetX angle in degrees
 	 */
 	public double calculateAngleToTarget( double distanceToTargetFT ) {
-		double offset = ((((double) boundingRect.x) + ((double) boundingRect.width) / 2.0) - (0.5 * ((double) imageMat.width())));
-		return Math.toDegrees(Math.atan((offset * ratioFTperPX) / distanceToTargetFT));
+		targetOffsetX = ((((double) boundingRect.x) + (targetWidthPX / 2.0)) - (0.5 * ((double) imageMat.width())));
+		targetOffsetY = ((((double) boundingRect.y) + (targetHeightPX / 2.0)) - (0.5 * ((double) imageMat.height())));
+		return Math.toDegrees(Math.atan((targetOffsetX * ratioFTperPX) / distanceToTargetFT));
 	}
+	
 	/**
 	 * Converts a Mat image into a Buffered image
 	 * @param m - Mat image to convert
@@ -268,15 +320,6 @@ public class TargetingComputer {
 		return mat;
 	}
 	
-	/**@deprecated NOT FINISHED YET
-	 * Saves the image to a directory.
-	 * @param bi - BufferedImage to save
-	 */
-	public void saveImage( BufferedImage bi) {
-		new ImageSaver(bi , "TEMP_NAME" , savedFrameCount).start();
-		savedFrameCount++;
-	}
-	
 	/**
 	 * returns the correctly filtered image upon request
 	 * @return desired image
@@ -302,28 +345,6 @@ public class TargetingComputer {
 	 */
 	public static void setImageType(int imageTypeIndex) {
 		IMAGE_TYPE = imageTypeIndex;
-	}
-	
-	//TODO Move this to its own separate class along with all the other image saving things
-	private class ImageSaver extends Thread {
-		private BufferedImage imageToSave;
-		private int imageCount;
-		private String imageInfo;
-		
-		public ImageSaver(BufferedImage image, String imageType, int count) {
-			imageToSave = image;
-			imageCount = count;
-			imageInfo = imageType;
-		}
-		
-		public void run(){
-			StringBuffer sb = new StringBuffer(SAVED_FRAME_PATH);
-			sb.append(File.separatorChar).append(imageInfo).append(".");
-			sb.append(imageCount).append(".jpg");
-			try {
-				ImageIO.write(imageToSave, "jpg", new File(sb.toString()));
-			} catch (IOException e) {}
-		}
 	}
 
 }

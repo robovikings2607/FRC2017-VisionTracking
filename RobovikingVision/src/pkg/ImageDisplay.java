@@ -10,7 +10,7 @@ import javax.swing.*;
  * of what the targeting software is doing. Additionally, contains features that allow
  * the filtering and swapping of the image that is displayed.
  * 
- * @version 3.11.2017
+ * @version 3.15.2017
  * @author DavidRein
  */
 public class ImageDisplay implements ActionListener {
@@ -136,7 +136,10 @@ public class ImageDisplay implements ActionListener {
 		
 		//The following lines allow for switching the image source
 		if(e.getSource().equals(rbMenuItem4)) ImageGrabber.setSourceType(ImageGrabber.k_CAMERA_FEED);
-		if(e.getSource().equals(rbMenuItem5)) ImageGrabber.setSourceType(ImageGrabber.k_IMAGE_STREAM);
+		if(e.getSource().equals(rbMenuItem5)) {
+			ImageStreamer.reset();
+			ImageGrabber.setSourceType(ImageGrabber.k_IMAGE_STREAM);
+		}
 		if(e.getSource().equals(rbMenuItem6)) ImageGrabber.setSourceType(ImageGrabber.k_IMAGE_FILE);
 	}
 }

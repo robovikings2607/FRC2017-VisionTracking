@@ -13,7 +13,7 @@ import org.opencv.videoio.VideoCapture;
  * Allows for capturing an image from an external source (e.g. camera feed, single image, image
  * file, etc.) given the path to that source. Also contains logic for switching between sources.
  * 
- * @version 3.11.2017
+ * @version 3.15.2017
  * @author DavidRein
  */
 public class ImageGrabber {
@@ -32,11 +32,13 @@ public class ImageGrabber {
 	
 	private VideoCapture vc;
 	private Mat cameraFrame;
+	private ImageStreamer streamer;
 	
 	/**Constructor - initializes all static fields in the ImageGrabber class*/
 	public ImageGrabber() {
 		SOURCE_TYPE = k_CAMERA_FEED;
-		SOURCE_PATH = "1ftH8ftD1Angle0Brightness.jpg";
+		//SOURCE_PATH = "1ftH8ftD1Angle0Brightness.jpg";
+		SOURCE_PATH = "savedImages-2017-2-13.15-34-1/Original";
 		try {DEFAULT_IMAGE = ImageIO.read(new File("placeholder.jpg"));} catch (IOException e) {}
 		vc = new VideoCapture(0);
 		cameraFrame = new Mat();
@@ -47,15 +49,16 @@ public class ImageGrabber {
 	 */
 	public BufferedImage grab() {
 		if(SOURCE_TYPE == ImageGrabber.k_CAMERA_FEED){
-			//TODO return frame grabbed from camera feed
 			//TODO get library containing IPCameraFrameGrabber (edu.wpi.grip.core.sources.IPCameraFrameGrabber)
 			//TODO implement IPCameraFrameGrabber based on lines 582 through 654 of 2016 vision tracking program
 			vc.read(cameraFrame);
 			return TargetingComputer.matToBuf(cameraFrame);
 		}
 		if(SOURCE_TYPE == ImageGrabber.k_IMAGE_STREAM){
-			//TODO return frame of an image stream
-			//TODO Implement something similar to the savedImageStreamer from 2016 vision tracking software
+			if(!ImageStreamer.hasEnded()) {
+				if(!ImageStreamer.isInitialized()) streamer = new ImageStreamer(SOURCE_PATH);
+				try { return ImageIO.read(new File(streamer.streamFileNames()));} catch (IOException e) {return DEFAULT_IMAGE;}
+			}
 		}
 		if(SOURCE_TYPE == ImageGrabber.k_IMAGE_FILE) {
 			try { return ImageIO.read(new File(SOURCE_PATH));} catch (IOException e) {return DEFAULT_IMAGE;}
@@ -65,7 +68,7 @@ public class ImageGrabber {
 	}
 	
 	/**@return path for the target source*/
-	public String getSourcePath(){
+	public static String getSourcePath(){
 		return SOURCE_PATH;
 	}
 	
