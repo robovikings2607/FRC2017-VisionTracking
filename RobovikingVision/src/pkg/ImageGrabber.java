@@ -40,7 +40,7 @@ public class ImageGrabber {
 		//SOURCE_PATH = "1ftH8ftD1Angle0Brightness.jpg";
 		SOURCE_PATH = "savedImages-2017-2-13.15-34-1/Original";
 		try {DEFAULT_IMAGE = ImageIO.read(new File("placeholder.jpg"));} catch (IOException e) {}
-		vc = new VideoCapture(0);
+		vc = new VideoCapture(1);
 		cameraFrame = new Mat();
 	}
 	/**

@@ -62,13 +62,13 @@ public class TargetingComputer {
 	
 	//TODO add a config file or a settings menu to edit these tolerances
 	//Tolerances for filtering the vision targets
-	private final double areaToleranceLowerBound = 100.0;
-	private final double areaToleranceUpperBound = 1100.0;
-	private final float ratioToleranceLowerBound = 1.0F;
-	private final float ratioToleranceUpperBound = 10.0F;
+	private final double areaToleranceLowerBound = 400.0;
+	private final double areaToleranceUpperBound = 4000.0;
+	private final float ratioToleranceLowerBound = 0.0F;
+	private final float ratioToleranceUpperBound = 100.0F;
 	private final int numberOfDesiredTargets = 2;
-	private final int xDiffTolerance = 20;
-	private final int yDiffTolerance = 40;
+	private final int xDiffTolerance = 1000;
+	private final int yDiffTolerance = 100;
 	
 	//Settings for Calibrating Vision
 	private final double targetWidthFT = 1.25;
@@ -96,12 +96,15 @@ public class TargetingComputer {
 		List<MatOfPoint> contours = getTargets(binMat);
 		processedImage = matToBuf(drawTargets(contours));
 		if(!contours.isEmpty()){
+			/*
 			targetWidthPX = (double) boundingRect.width;
 			targetHeightPX = (double) boundingRect.height;
 			distToTargetFT = calculateDistanceToTarget(targetWidthPX);
 			System.out.print(distToTargetFT + "    ");
 			angleToTargetDEG = calculateAngleToTarget(distToTargetFT);
 			System.out.println(angleToTargetDEG);
+			*/
+			calculateAngleToTurn();
 			drawHUD();
 		} else {
 			distToTargetFT = 0.0;
@@ -279,6 +282,7 @@ public class TargetingComputer {
 		return (0.5 * ((double) imageMat.width()) * ratioFTperPX) / Math.tan(Math.toRadians(FOVangle/2));
 	}
 	
+	
 	/**
 	 * Uses the distance to the target to calculate the angle that the camera must rotate in order to line up with the target
 	 * @param distanceToTargetFT - distance to target in feet
@@ -288,6 +292,13 @@ public class TargetingComputer {
 		targetOffsetX = ((((double) boundingRect.x) + (targetWidthPX / 2.0)) - (0.5 * ((double) imageMat.width())));
 		targetOffsetY = ((((double) boundingRect.y) + (targetHeightPX / 2.0)) - (0.5 * ((double) imageMat.height())));
 		return Math.toDegrees(Math.atan((targetOffsetX * ratioFTperPX) / distanceToTargetFT));
+	}
+	
+	public double calculateAngleToTurn() {
+		double targetCOM = boundingRect.x + (boundingRect.width / 2);
+		double degToTurn = (targetCOM - 240) * 61 / imageMat.width();
+		System.out.println(degToTurn);
+		return degToTurn;
 	}
 	
 	/**
