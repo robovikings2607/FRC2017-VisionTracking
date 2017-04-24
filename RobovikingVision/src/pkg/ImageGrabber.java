@@ -3,11 +3,12 @@ package pkg;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
 
-import org.opencv.core.Mat;
-import org.opencv.videoio.VideoCapture;
+import edu.wpi.grip.core.sources.IPCameraFrameGrabber;
 
 /**
  * Allows for capturing an image from an external source (e.g. camera feed, single image, image
@@ -30,8 +31,10 @@ public class ImageGrabber {
 	/**The default image to be displayed if no source is detected*/
 	public static BufferedImage DEFAULT_IMAGE;
 	
-	private VideoCapture vc;
-	private Mat cameraFrame;
+	//private VideoCapture vc;
+	private IPCameraFrameGrabber camGrabber;
+	//private Mat cameraFrame;
+	private ConnectionThread connectionThread;
 	private ImageStreamer streamer;
 	
 	/**Constructor - initializes all static fields in the ImageGrabber class*/
@@ -40,8 +43,16 @@ public class ImageGrabber {
 		//SOURCE_PATH = "1ftH8ftD1Angle0Brightness.jpg";
 		SOURCE_PATH = "savedImages-2017-2-13.15-34-1/Original";
 		try {DEFAULT_IMAGE = ImageIO.read(new File("placeholder.jpg"));} catch (IOException e) {}
-		vc = new VideoCapture(1);
-		cameraFrame = new Mat();
+		//vc = new VideoCapture(1);
+		try {
+			camGrabber = new IPCameraFrameGrabber("http://10.6.7.2:1181/?action=stream", 3000, 2000, TimeUnit.MILLISECONDS);
+		} catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		connectionThread = new ConnectionThread();
+		connectionThread.start();
+		//cameraFrame = new Mat();
 	}
 	/**
 	 * Captures and stores an image from an external source (e.g. camera feed, image stream, image file)
@@ -49,10 +60,17 @@ public class ImageGrabber {
 	 */
 	public BufferedImage grab() {
 		if(SOURCE_TYPE == ImageGrabber.k_CAMERA_FEED){
-			//TODO get library containing IPCameraFrameGrabber (edu.wpi.grip.core.sources.IPCameraFrameGrabber)
-			//TODO implement IPCameraFrameGrabber based on lines 582 through 654 of 2016 vision tracking program
-			vc.read(cameraFrame);
-			return TargetingComputer.matToBuf(cameraFrame);
+			if(!connectionThread.isAlive()) {
+				try {
+					return camGrabber.grabBufferedImage();
+				} catch (Exception e) {
+					System.out.printf("camGrabber.grab(): %s\n", e.getMessage());
+		            try { Thread.sleep(1500); } catch (Exception e1) {}
+				}
+			} else {}
+			
+			//vc.read(cameraFrame);
+			//return TargetingComputer.matToBuf(cameraFrame);
 		}
 		if(SOURCE_TYPE == ImageGrabber.k_IMAGE_STREAM){
 			if(!ImageStreamer.hasEnded()) {
@@ -77,6 +95,27 @@ public class ImageGrabber {
 	 * @see ImageGrabber(line 21)*/
 	public static void setSourceType(int sourceIndex) {
 		SOURCE_TYPE = sourceIndex;
+	}
+	
+	private class ConnectionThread extends Thread {
+		
+		public void run(){
+			boolean keepTrying = true;
+	        while (keepTrying) {
+	            String stepName = "null";
+	            try {
+	                stepName = "camGrabber.start()";
+	                camGrabber.start();
+	                stepName = "camGrabber.grab()";
+	                camGrabber.grab();
+	                keepTrying = false;
+	            } catch (Exception e) {
+	                System.out.printf("%s: %s ... retrying... \n", stepName, e.getMessage());               
+	                try { Thread.sleep(1500); } catch (Exception e1) {}
+	            }
+	        }
+		}
+		
 	}
 
 }

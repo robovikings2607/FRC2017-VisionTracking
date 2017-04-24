@@ -116,7 +116,8 @@ public class ImageDisplay implements ActionListener {
 	 */
 	public void setImage(BufferedImage buffImg) {
 		imgIcon.setImage(buffImg); //changes the desired image to display
-		frame.setSize(buffImg.getWidth(), buffImg.getHeight()); //matches the frame size to the image size
+		//frame.setSize(buffImg.getWidth(), buffImg.getHeight()); //matches the frame size to the image size
+		frame.setSize(854, 480);
 		frame.repaint(); //refreshes the window to display new image
 	}
 

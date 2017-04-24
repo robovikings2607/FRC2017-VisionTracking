@@ -5,12 +5,7 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
-import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,6 +14,8 @@ import javax.imageio.ImageIO;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+
+import edu.wpi.first.smartdashboard.robot.Robot;
 /**
  * Contains all logic and algorithms pertaining to processing a given image and calculating
  * data from the information acquired from processing the image. Additionally, allows for 'filtered'
@@ -81,6 +78,7 @@ public class TargetingComputer {
 		SAVE_IMAGES = false;
 		savedFrameCount = 0;
 		boundingRect = new Rect();
+		Robot.setTeam(607);
 	}
 	
 	boolean firstRun = true;
@@ -104,12 +102,14 @@ public class TargetingComputer {
 			angleToTargetDEG = calculateAngleToTarget(distToTargetFT);
 			System.out.println(angleToTargetDEG);
 			*/
-			calculateAngleToTurn();
+			angleToTargetDEG = calculateAngleToTurn();
 			drawHUD();
 		} else {
 			distToTargetFT = 0.0;
 			angleToTargetDEG = 0.0;
 		}
+		
+		Robot.getTable().putNumber("degToRotate", angleToTargetDEG);
 		
 		if(SAVE_IMAGES) {
 			switch(savedFrameCount) {
